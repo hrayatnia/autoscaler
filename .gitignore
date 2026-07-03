@@ -1,0 +1,16 @@
+# Secrets - never commit
+config.json
+.webhook-secret
+*.env
+.env
+
+# Go build artifacts
+bin/
+*.exe
+*.test
+*.out
+
+# OS/editor cruft
+.DS_Store
+.idea/
+.vscode/

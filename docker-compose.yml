@@ -1,0 +1,22 @@
+name: subzero-runner-autoscaler
+
+services:
+  autoscaler:
+    build: .
+    image: subzero-runner-autoscaler:dev
+    container_name: subzero-runner-autoscaler
+    restart: unless-stopped
+    environment:
+      SMEE_URL: ${SMEE_URL}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:-}
+      GH_PAT: ${GH_PAT}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./config.json:/etc/autoscaler/config.json:ro
+    ports:
+      - "127.0.0.1:8088:8080"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

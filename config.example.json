@@ -1,0 +1,44 @@
+{
+  "smee_url": "https://smee.io/REPLACE-ME",
+  "webhook_secret": "REPLACE-ME",
+  "github_pat": "ghp_REPLACE-ME",
+  "runner_image": "myoung34/github-runner:latest",
+  "listen": ":8080",
+  "repos": [
+    {
+      "name": "your-org/backend-service",
+      "repo_url": "https://github.com/your-org/backend-service",
+      "label": "mac-docker-backend",
+      "runner_labels": "mac-docker-backend,backend-service,auto",
+      "max_concurrency": 8
+    },
+    {
+      "name": "your-org/frontend-app",
+      "repo_url": "https://github.com/your-org/frontend-app",
+      "label": "mac-docker-frontend",
+      "runner_labels": "mac-docker-frontend,frontend-app,auto",
+      "max_concurrency": 4
+    },
+    {
+      "name": "your-org/sdks",
+      "repo_url": "https://github.com/your-org/sdks",
+      "label": "mac-docker-sdks",
+      "runner_labels": "mac-docker-sdks,sdks,auto",
+      "max_concurrency": 4
+    },
+    {
+      "name": "your-org/infra",
+      "repo_url": "https://github.com/your-org/infra",
+      "label": "mac-docker-infra",
+      "runner_labels": "mac-docker-infra,infra,auto",
+      "max_concurrency": 2
+    },
+    {
+      "name": "your-org/root",
+      "repo_url": "https://github.com/your-org/root",
+      "label": "mac-docker-root",
+      "runner_labels": "mac-docker-root,root,auto",
+      "max_concurrency": 2
+    }
+  ]
+}

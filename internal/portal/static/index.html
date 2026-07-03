@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Runner Autoscaler</title>
+<style>
+  :root {
+    --bg: #0e1116; --fg: #c9d1d9; --muted: #6e7681; --accent: #58a6ff;
+    --good: #3fb950; --bad: #f85149; --warn: #d29922; --card: #161b22;
+    --border: #30363d;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg);
+    font: 14px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; }
+  header { padding: 14px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 24px; }
+  header h1 { margin: 0; font-size: 16px; font-weight: 600; }
+  header .health { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px;
+    border: 1px solid var(--border); border-radius: 12px; font-size: 12px; }
+  header .health .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  header .health.up .dot { background: var(--good); }
+  header .health.down .dot { background: var(--bad); }
+  header .spacer { flex: 1; }
+  header button { background: transparent; color: var(--fg); border: 1px solid var(--border);
+    padding: 6px 12px; border-radius: 6px; cursor: pointer; font: inherit; }
+  header button:hover { border-color: var(--accent); color: var(--accent); }
+  header button.danger:hover { border-color: var(--bad); color: var(--bad); }
+  main { padding: 24px; max-width: 1280px; margin: 0 auto; }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px; margin-bottom: 24px; }
+  .stat { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; }
+  .stat .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat .value { font-size: 24px; font-weight: 600; margin-top: 4px; }
+  .stat.spawned .value { color: var(--accent); }
+  .stat.idle-skip .value { color: var(--good); }
+  .stat.cap-hit .value { color: var(--warn); }
+  .stat.errors .value { color: var(--bad); }
+  table { width: 100%; border-collapse: collapse; background: var(--card);
+    border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { background: rgba(110, 118, 129, 0.05); color: var(--muted); font-weight: 500;
+    font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  tr:last-child td { border-bottom: none; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px;
+    border: 1px solid currentColor; }
+  .pill.online { color: var(--good); }
+  .pill.offline { color: var(--bad); }
+  .pill.busy { color: var(--warn); }
+  .pill.idle { color: var(--muted); }
+  .pill.ghost { color: var(--bad); border-color: var(--bad); background: rgba(248, 81, 73, 0.08); }
+  section { margin-bottom: 28px; }
+  section h2 { font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px;
+    margin: 0 0 10px 0; }
+  .actions { display: inline-flex; gap: 6px; }
+  .actions button { padding: 4px 10px; font-size: 12px; }
+  .muted { color: var(--muted); font-size: 12px; }
+  .error-banner { padding: 10px 14px; background: rgba(248, 81, 73, 0.08);
+    border: 1px solid var(--bad); border-radius: 6px; margin-bottom: 16px; color: var(--bad); }
+  .footer { color: var(--muted); font-size: 11px; text-align: right; padding-top: 16px; }
+  .paused-banner { padding: 8px 14px; background: rgba(210, 153, 34, 0.1);
+    border: 1px solid var(--warn); border-radius: 6px; color: var(--warn); margin-bottom: 16px;
+    display: flex; align-items: center; gap: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Runner Autoscaler</h1>
+  <span id="health" class="health"><span class="dot"></span> <span class="text">…</span></span>
+  <span id="paused" class="health" style="display:none; color: var(--warn); border-color: var(--warn);"><span class="dot" style="background: var(--warn);"></span> paused</span>
+  <span class="spacer"></span>
+  <button id="btn-reconcile">Force reconcile</button>
+  <button id="btn-cleanup" class="danger">Clean ghosts</button>
+  <button id="btn-pause">Pause</button>
+  <button id="btn-resume" style="display:none;">Resume</button>
+</header>
+<main>
+  <div id="error" class="error-banner" style="display: none;"></div>
+  <div id="paused-banner" class="paused-banner" style="display:none;">
+    <span>Spawning is paused. Reconciler still runs but will not spawn.</span>
+  </div>
+
+  <section>
+    <h2>Lifetime counters</h2>
+    <div class="stats-grid">
+      <div class="stat spawned"><div class="label">Spawned</div><div class="value" id="s-spawned">–</div></div>
+      <div class="stat idle-skip"><div class="label">Idle skipped</div><div class="value" id="s-idle">–</div></div>
+      <div class="stat cap-hit"><div class="label">Cap hits</div><div class="value" id="s-cap">–</div></div>
+      <div class="stat errors"><div class="label">Errors</div><div class="value" id="s-err">–</div></div>
+      <div class="stat"><div class="label">Reconcile spawns</div><div class="value" id="s-rec">–</div></div>
+      <div class="stat"><div class="label">Ghosts cleaned</div><div class="value" id="s-ghost">–</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Per-repo state</h2>
+    <table>
+      <thead>
+        <tr><th>Repo</th><th>Queued</th><th>In progress</th><th>Online runners</th><th>Busy</th><th>Idle</th><th>Ghosts</th><th>Live ephemerals</th><th>Cap</th><th>Actions</th></tr>
+      </thead>
+      <tbody id="repos-tbody"><tr><td colspan="10" class="muted">Loading…</td></tr></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Live ephemeral containers</h2>
+    <table>
+      <thead><tr><th>Name</th><th>Repo</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody id="containers-tbody"><tr><td colspan="4" class="muted">Loading…</td></tr></tbody>
+    </table>
+  </section>
+
+  <div class="footer" id="footer">Refreshing every 5s</div>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const showError = (msg) => { const el = $('error'); el.textContent = msg; el.style.display = 'block'; };
+const hideError = () => { $('error').style.display = 'none'; };
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, opts);
+  if (!res.ok) throw new Error(`${opts.method || 'GET'} ${path}: ${res.status}`);
+  const ct = res.headers.get('content-type') || '';
+  return ct.includes('json') ? res.json() : res.text();
+}
+
+async function refresh() {
+  try {
+    const state = await api('/api/state');
+    hideError();
+    $('health').classList.remove('down'); $('health').classList.add('up');
+    $('health').querySelector('.text').textContent = 'healthy';
+
+    const paused = state.paused;
+    $('paused-banner').style.display = paused ? 'flex' : 'none';
+    $('btn-pause').style.display = paused ? 'none' : 'inline-block';
+    $('btn-resume').style.display = paused ? 'inline-block' : 'none';
+
+    $('s-spawned').textContent = state.stats.total_spawned;
+    $('s-idle').textContent = state.stats.total_idle_skip;
+    $('s-cap').textContent = state.stats.total_cap_hit;
+    $('s-err').textContent = state.stats.total_errors;
+    $('s-rec').textContent = state.stats.total_reconcile;
+    $('s-ghost').textContent = state.cleanup.total_ghosts_deleted_lifetime || 0;
+
+    const tbody = $('repos-tbody');
+    if (!state.repos || state.repos.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="10" class="muted">No repos configured.</td></tr>';
+    } else {
+      tbody.innerHTML = state.repos.map(r => `
+        <tr>
+          <td><strong>${escapeHtml(r.name)}</strong></td>
+          <td>${r.queued}</td>
+          <td>${r.in_progress}</td>
+          <td>${r.online}</td>
+          <td>${r.busy}</td>
+          <td>${r.idle}</td>
+          <td>${r.ghosts > 0 ? `<span class="pill ghost">${r.ghosts}</span>` : '0'}</td>
+          <td>${r.running_ephemerals}</td>
+          <td>${r.cap}</td>
+          <td><div class="actions">
+            <button data-act="reconcile" data-repo="${escapeAttr(r.name)}">reconcile</button>
+            <button data-act="cleanup" data-repo="${escapeAttr(r.name)}" class="danger">clean</button>
+          </div></td>
+        </tr>`).join('');
+    }
+
+    const ctbody = $('containers-tbody');
+    if (!state.containers || state.containers.length === 0) {
+      ctbody.innerHTML = '<tr><td colspan="4" class="muted">No live ephemeral containers.</td></tr>';
+    } else {
+      ctbody.innerHTML = state.containers.map(c => `
+        <tr>
+          <td><code>${escapeHtml(c.name)}</code></td>
+          <td>${escapeHtml(c.repo || '–')}</td>
+          <td><span class="pill ${c.busy ? 'busy' : 'idle'}">${c.busy ? 'busy' : 'idle'}</span></td>
+          <td><button data-act="stop" data-name="${escapeAttr(c.name)}" class="danger">stop</button></td>
+        </tr>`).join('');
+    }
+
+    $('footer').textContent = `Last refresh: ${new Date().toLocaleTimeString()} — Refreshing every 5s`;
+  } catch (e) {
+    $('health').classList.remove('up'); $('health').classList.add('down');
+    $('health').querySelector('.text').textContent = 'down';
+    showError(`Cannot reach autoscaler: ${e.message}`);
+  }
+}
+
+function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s) { return escapeHtml(s); }
+
+document.addEventListener('click', async (e) => {
+  const t = e.target;
+  if (t.tagName !== 'BUTTON') return;
+  const act = t.dataset.act;
+  try {
+    if (t.id === 'btn-reconcile') { await api('/api/reconcile', { method: 'POST' }); }
+    else if (t.id === 'btn-cleanup') { await api('/api/cleanup', { method: 'POST' }); }
+    else if (t.id === 'btn-pause') { await api('/api/pause', { method: 'POST' }); }
+    else if (t.id === 'btn-resume') { await api('/api/resume', { method: 'POST' }); }
+    else if (act === 'reconcile') { await api('/api/reconcile?repo=' + encodeURIComponent(t.dataset.repo), { method: 'POST' }); }
+    else if (act === 'cleanup') { await api('/api/cleanup?repo=' + encodeURIComponent(t.dataset.repo), { method: 'POST' }); }
+    else if (act === 'stop') {
+      if (!confirm(`Stop runner ${t.dataset.name}?`)) return;
+      await api('/api/stop?name=' + encodeURIComponent(t.dataset.name), { method: 'POST' });
+    } else { return; }
+    setTimeout(refresh, 600);
+  } catch (err) { showError(`Action failed: ${err.message}`); }
+});
+
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>
