@@ -13,8 +13,8 @@ import (
 )
 
 type captureHandler struct {
-	mu     sync.Mutex
-	calls  []capture
+	mu          sync.Mutex
+	calls       []capture
 	dispatchErr error
 }
 

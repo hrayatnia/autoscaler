@@ -271,13 +271,13 @@ func (s *Spawner) Stats() Stats {
 	}
 }
 
-func (s *Spawner) IncReconcile()                { s.totalReconcile.Add(1) }
-func (s *Spawner) PAT() string                  { return s.pat }
-func (s *Spawner) HTTPClient() HTTPDoer         { return s.http }
-func (s *Spawner) Docker() DockerExecer         { return s.docker }
-func (s *Spawner) APIBase() string              { return s.apiBase }
-func (s *Spawner) SetPaused(p bool)             { s.paused.Store(p) }
-func (s *Spawner) IsPaused() bool               { return s.paused.Load() }
+func (s *Spawner) IncReconcile()        { s.totalReconcile.Add(1) }
+func (s *Spawner) PAT() string          { return s.pat }
+func (s *Spawner) HTTPClient() HTTPDoer { return s.http }
+func (s *Spawner) Docker() DockerExecer { return s.docker }
+func (s *Spawner) APIBase() string      { return s.apiBase }
+func (s *Spawner) SetPaused(p bool)     { s.paused.Store(p) }
+func (s *Spawner) IsPaused() bool       { return s.paused.Load() }
 
 // RepoRunnerCounts returns (online, busy, ghost) for runners whose names
 // start with our `auto-` prefix.

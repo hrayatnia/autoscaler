@@ -35,11 +35,11 @@ import (
 )
 
 const (
-	autoPrefix         = "auto-"
-	managedLabel       = "gha-autoscaler=true"
-	repoLabelKey       = "gha-autoscaler-repo"
-	defaultLocalGrace  = 5 * time.Minute
-	dockerCmdTimeout   = 60 * time.Second
+	autoPrefix        = "auto-"
+	managedLabel      = "gha-autoscaler=true"
+	repoLabelKey      = "gha-autoscaler-repo"
+	defaultLocalGrace = 5 * time.Minute
+	dockerCmdTimeout  = 60 * time.Second
 )
 
 type Cleaner struct {
@@ -49,8 +49,8 @@ type Cleaner struct {
 
 	localGrace time.Duration
 
-	totalGhostsDeleted    atomic.Uint64
-	totalRunsCancelled    atomic.Uint64
+	totalGhostsDeleted     atomic.Uint64
+	totalRunsCancelled     atomic.Uint64
 	totalLocalGhostsReaped atomic.Uint64
 
 	lastMu      sync.Mutex

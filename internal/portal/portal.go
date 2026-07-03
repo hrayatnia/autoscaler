@@ -110,11 +110,11 @@ type ContainerState struct {
 }
 
 type State struct {
-	Stats      spawner.Stats     `json:"stats"`
-	Cleanup    cleanup.Summary   `json:"cleanup"`
-	Repos      []RepoState       `json:"repos"`
-	Containers []ContainerState  `json:"containers"`
-	Paused     bool              `json:"paused"`
+	Stats      spawner.Stats    `json:"stats"`
+	Cleanup    cleanup.Summary  `json:"cleanup"`
+	Repos      []RepoState      `json:"repos"`
+	Containers []ContainerState `json:"containers"`
+	Paused     bool             `json:"paused"`
 }
 
 func (s *Server) handleState(w http.ResponseWriter, r *http.Request) {
