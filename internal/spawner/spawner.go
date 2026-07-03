@@ -151,7 +151,11 @@ func (s *Spawner) Spawn(ctx context.Context, repo *config.RepoConfig) error {
 		s.log.Info("skip spawn: idle matching runner exists", "repo", repo.Name)
 		return nil
 	} else if err != nil {
-		s.log.Warn("idle check failed; spawning anyway", "repo", repo.Name, "err", err)
+		if isAuthOrPermissionError(err) {
+			s.log.Error("github auth/permission error on idle-check — check PAT scopes", "repo", repo.Name, "err", err)
+		} else {
+			s.log.Warn("idle check failed; spawning anyway", "repo", repo.Name, "err", err)
+		}
 	}
 
 	running, err := s.countRunning(ctx, repo.Name)
@@ -281,15 +285,18 @@ func (s *Spawner) RepoRunnerCounts(ctx context.Context, repo *config.RepoConfig)
 	url := fmt.Sprintf("%s/repos/%s/actions/runners?per_page=100", s.apiBase, repo.Name)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
+		s.log.Warn("list runners failed", "repo", repo.Name, "err", err)
 		return
 	}
 	s.signRequest(req)
 	resp, err := s.http.Do(req)
 	if err != nil {
+		s.log.Warn("list runners failed", "repo", repo.Name, "err", err)
 		return
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
+		s.log.Warn("list runners failed", "repo", repo.Name, "status", resp.StatusCode)
 		return
 	}
 	var page struct {
@@ -300,6 +307,7 @@ func (s *Spawner) RepoRunnerCounts(ctx context.Context, repo *config.RepoConfig)
 		} `json:"runners"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&page); err != nil {
+		s.log.Warn("list runners failed", "repo", repo.Name, "err", err)
 		return
 	}
 	for _, r := range page.Runners {
@@ -364,6 +372,19 @@ func (s *Spawner) hasIdleMatchingRunner(ctx context.Context, repo *config.RepoCo
 		}
 	}
 	return false, nil
+}
+
+// isAuthOrPermissionError reports whether err wraps a GitHub 401/403
+// response (as produced by hasIdleMatchingRunner's "status %d" wrapping).
+// A 401/403 usually means the PAT is invalid or missing scopes, which is
+// worth surfacing distinctly from transient (rate-limit/5xx) failures so
+// on-call can grep it apart from routine noise.
+func isAuthOrPermissionError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "status 401") || strings.Contains(msg, "status 403")
 }
 
 func (s *Spawner) signRequest(req *http.Request) {

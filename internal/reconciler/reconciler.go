@@ -165,7 +165,10 @@ func (r *Reconciler) countQueuedMatchingJobs(ctx context.Context, repo *config.R
 	for _, runID := range runs {
 		jobs, err := r.listRunJobs(ctx, repo, runID)
 		if err != nil {
-			r.log.Debug("list jobs failed", "repo", repo.Name, "run_id", runID, "err", err)
+			// Warn (not Debug): a run-level auth/permission error here (e.g. a
+			// PAT missing scope) would otherwise look identical to "no jobs
+			// queued" in the default log-level=info deployment.
+			r.log.Warn("list jobs failed", "repo", repo.Name, "run_id", runID, "err", err)
 			continue
 		}
 		for _, j := range jobs {
@@ -186,8 +189,30 @@ func (r *Reconciler) countQueuedMatchingJobs(ctx context.Context, repo *config.R
 	return matched, nil
 }
 
+// listQueuedRunIDs returns run IDs that may still contain individually
+// queued jobs. This includes runs whose aggregate status is "queued", but
+// also runs whose status has already flipped to "in_progress" — GitHub's
+// run-level status is an aggregate that flips to in_progress as soon as ANY
+// job in the run starts, even if sibling jobs in the same run (e.g. a
+// matrix build where a concurrency cap only let some jobs spawn) are still
+// individually queued. Without including in_progress runs here, those
+// straggler queued jobs would become permanently invisible to the
+// reconciler once their run's first job starts. The per-job filter in
+// countQueuedMatchingJobs still narrows this down to actually-queued jobs.
 func (r *Reconciler) listQueuedRunIDs(ctx context.Context, repo *config.RepoConfig) ([]int64, error) {
-	url := fmt.Sprintf("%s/repos/%s/actions/runs?status=queued&per_page=100", r.apiBaseFor(), repo.Name)
+	queued, err := r.listRunIDsByStatus(ctx, repo, "queued")
+	if err != nil {
+		return nil, err
+	}
+	inProgress, err := r.listRunIDsByStatus(ctx, repo, "in_progress")
+	if err != nil {
+		return nil, err
+	}
+	return append(queued, inProgress...), nil
+}
+
+func (r *Reconciler) listRunIDsByStatus(ctx context.Context, repo *config.RepoConfig, status string) ([]int64, error) {
+	url := fmt.Sprintf("%s/repos/%s/actions/runs?status=%s&per_page=100", r.apiBaseFor(), repo.Name, status)
 	body, err := r.apiGET(ctx, url)
 	if err != nil {
 		return nil, err

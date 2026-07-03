@@ -43,6 +43,7 @@ type Client struct {
 
 // Run blocks until ctx is canceled. On disconnect, reconnects with backoff.
 func (c *Client) Run(ctx context.Context) error {
+	const maxBackoff = 30 * time.Second
 	backoff := time.Second
 	for {
 		select {
@@ -50,16 +51,24 @@ func (c *Client) Run(ctx context.Context) error {
 			return ctx.Err()
 		default:
 		}
+		connectedAt := time.Now()
 		err := c.connect(ctx)
 		if err != nil && !errors.Is(err, context.Canceled) {
 			c.Log.Warn("smee connection lost", "err", err, "backoff", backoff.String())
+		}
+		// A connection that stayed up at least as long as the max backoff
+		// window is evidence smee/network are healthy again; reset so an
+		// isolated blip after a long stable stream doesn't inherit an
+		// already-escalated delay from unrelated, long-past failures.
+		if time.Since(connectedAt) >= maxBackoff {
+			backoff = time.Second
 		}
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-time.After(backoff):
 		}
-		backoff = capDuration(backoff*2, 30*time.Second)
+		backoff = capDuration(backoff*2, maxBackoff)
 	}
 }
 
