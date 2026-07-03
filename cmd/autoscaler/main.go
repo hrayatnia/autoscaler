@@ -1,5 +1,5 @@
-// Command autoscaler is the entrypoint for the SubZero ephemeral
-// GitHub-Actions runner autoscaler. It wires:
+// Command autoscaler is the entrypoint for the ephemeral GitHub Actions
+// runner autoscaler. It wires:
 //
 //   - smee client → webhook handler  (webhook-driven spawns)
 //   - reconciler                      (catches missed/queued jobs)

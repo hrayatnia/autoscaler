@@ -1,10 +1,10 @@
-name: subzero-runner-autoscaler
+name: gha-runner-autoscaler
 
 services:
   autoscaler:
     build: .
-    image: subzero-runner-autoscaler:dev
-    container_name: subzero-runner-autoscaler
+    image: gha-runner-autoscaler:dev
+    container_name: gha-runner-autoscaler
     restart: unless-stopped
     environment:
       SMEE_URL: ${SMEE_URL}

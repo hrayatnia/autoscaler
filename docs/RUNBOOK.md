@@ -22,7 +22,7 @@ deploy. The compose stack:
 |---|---|
 | `curl -s http://127.0.0.1:8088/healthz` | `ok` |
 | `curl -s http://127.0.0.1:8088/stats | jq` | non-zero `total_spawned` after first webhook |
-| `docker ps --filter label=subzero-autoscaler=true` | one row per live ephemeral |
+| `docker ps --filter label=gha-autoscaler=true` | one row per live ephemeral |
 | GitHub repo → Settings → Actions → Runners | `auto-*` runners in `Idle` / `Active` |
 
 ## First-time setup
@@ -82,7 +82,7 @@ curl -s http://127.0.0.1:8088/api/state | jq
 |---|---|---|
 | `concurrency cap hit` repeated in logs | One repo's jobs back-to-back; cap too low | Raise `max_concurrency` for that repo in `config.json`, restart |
 | `idle check failed; spawning anyway` | GitHub API rate-limit or 5xx | Usually transient; check `gh api rate_limit` |
-| Stats `total_errors` ticking up | `docker run` failing — bad image, no socket, OOM | `docker logs subzero-runner-autoscaler` — stderr captured in error message |
+| Stats `total_errors` ticking up | `docker run` failing — bad image, no socket, OOM | `docker logs gha-runner-autoscaler` — stderr captured in error message |
 | Ghost runners not draining | Ephemeral container died mid-job; GitHub keeps registration ~30 m | Cleanup loop will `DELETE` after heartbeat timeout. Force: `POST /api/cleanup` |
 | `--rm` containers stuck in `Removing` (macOS Docker Desktop) | Known Docker Desktop bug with deep mount stacks | Cleanup reaps them on next tick; manual `docker rm -f <id>` works |
 | `smee connection lost` in logs, no spawns | smee.io down, or transient network | Auto-reconnects with 1–30s backoff; check https://status.smee.io |
@@ -120,8 +120,8 @@ hitting `/api/*`.
 JSON to stdout. Tail:
 
 ```bash
-docker logs -f subzero-runner-autoscaler
-docker logs subzero-runner-autoscaler 2>&1 | jq -c 'select(.level=="ERROR")'
+docker logs -f gha-runner-autoscaler
+docker logs gha-runner-autoscaler 2>&1 | jq -c 'select(.level=="ERROR")'
 ```
 
 Useful filters:

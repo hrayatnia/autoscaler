@@ -69,7 +69,7 @@ func (c *Client) connect(ctx context.Context) error {
 		return err
 	}
 	req.Header.Set("Accept", "text/event-stream")
-	req.Header.Set("User-Agent", "subzero-runner-autoscaler/2.0")
+	req.Header.Set("User-Agent", "gha-runner-autoscaler/2.0")
 
 	client := c.HTTPClient
 	if client == nil {

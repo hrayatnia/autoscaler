@@ -24,8 +24,8 @@ import (
 var indexHTML []byte
 
 const (
-	managedLabel = "subzero-autoscaler=true"
-	repoLabelKey = "subzero-autoscaler-repo"
+	managedLabel = "gha-autoscaler=true"
+	repoLabelKey = "gha-autoscaler-repo"
 )
 
 // ReconcileTrigger is implemented by reconciler.Reconciler. Decoupled here

@@ -36,8 +36,8 @@ import (
 
 const (
 	autoPrefix         = "auto-"
-	managedLabel       = "subzero-autoscaler=true"
-	repoLabelKey       = "subzero-autoscaler-repo"
+	managedLabel       = "gha-autoscaler=true"
+	repoLabelKey       = "gha-autoscaler-repo"
 	defaultLocalGrace  = 5 * time.Minute
 	dockerCmdTimeout   = 60 * time.Second
 )
@@ -346,7 +346,7 @@ func (c *Cleaner) deleteRunner(ctx context.Context, repo *config.RepoConfig, id 
 }
 
 // reapLocalGhosts removes containers we spawned (label
-// `subzero-autoscaler=true`) that no longer correspond to a registered runner
+// `gha-autoscaler=true`) that no longer correspond to a registered runner
 // on GitHub for their declared repo. These accumulate when:
 //   - A runner finishes a job and exits, but Docker `--rm` hangs (Docker
 //     Desktop on macOS, deep mount stacks → containers stuck in "removing").

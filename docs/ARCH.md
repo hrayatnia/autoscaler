@@ -3,8 +3,8 @@
 `github.com/hrayatnia/autoscaler` is a single-binary Go service that
 spawns ephemeral self-hosted GitHub Actions runner containers on demand.
 It runs co-resident with the Docker daemon on the host that will execute
-the jobs (typically a Mac with Docker Desktop in the SubZero deployment),
-and replaces the previous static-pool docker-compose stack.
+the jobs (typically a Mac with Docker Desktop), and replaces a previous
+static-pool docker-compose stack of always-on runner containers.
 
 ## Goals
 

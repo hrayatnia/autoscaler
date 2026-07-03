@@ -28,11 +28,11 @@ func (f *fakeDocker) Exec(_ context.Context, args ...string) ([]byte, []byte, er
 	cmd := args[0]
 	switch cmd {
 	case "ps":
-		// extract `label=subzero-autoscaler-repo=<repo>`
+		// extract `label=gha-autoscaler-repo=<repo>`
 		repo := ""
 		for i, a := range args {
-			if strings.HasPrefix(a, "label=subzero-autoscaler-repo=") {
-				repo = strings.TrimPrefix(a, "label=subzero-autoscaler-repo=")
+			if strings.HasPrefix(a, "label=gha-autoscaler-repo=") {
+				repo = strings.TrimPrefix(a, "label=gha-autoscaler-repo=")
 			}
 			_ = i
 		}
@@ -61,8 +61,8 @@ func (f *fakeDocker) Exec(_ context.Context, args ...string) ([]byte, []byte, er
 		// Extract repo via --label flag.
 		repo := ""
 		for i, a := range args {
-			if a == "--label" && i+1 < len(args) && strings.HasPrefix(args[i+1], "subzero-autoscaler-repo=") {
-				repo = strings.TrimPrefix(args[i+1], "subzero-autoscaler-repo=")
+			if a == "--label" && i+1 < len(args) && strings.HasPrefix(args[i+1], "gha-autoscaler-repo=") {
+				repo = strings.TrimPrefix(args[i+1], "gha-autoscaler-repo=")
 			}
 		}
 		f.runs.Add(1)
