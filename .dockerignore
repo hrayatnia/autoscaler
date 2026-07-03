@@ -1,0 +1,18 @@
+# Secrets - must never enter the build context/image layers
+config.json
+.webhook-secret
+*.env
+.env
+
+# VCS / editor / OS cruft - irrelevant to the build, bloats the image
+.git
+.gitignore
+.DS_Store
+.idea/
+.vscode/
+
+# Build artifacts
+bin/
+*.exe
+*.test
+*.out

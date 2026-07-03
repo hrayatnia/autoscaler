@@ -6,10 +6,13 @@ services:
     image: gha-runner-autoscaler:dev
     container_name: gha-runner-autoscaler
     restart: unless-stopped
-    environment:
-      SMEE_URL: ${SMEE_URL}
-      WEBHOOK_SECRET: ${WEBHOOK_SECRET:-}
-      GH_PAT: ${GH_PAT}
+    # Secrets are read from the mounted config.json below, not from the
+    # environment - that avoids them showing up in plaintext in `docker
+    # inspect`. The binary also supports SMEE_URL/WEBHOOK_SECRET/GH_PAT/
+    # PORTAL_TOKEN env vars as a fallback (see internal/config), useful for
+    # env-based secret injection (e.g. Kubernetes Secrets), but they are
+    # intentionally not wired up here to keep this compose file's single
+    # source of truth unambiguous.
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./config.json:/etc/autoscaler/config.json:ro
