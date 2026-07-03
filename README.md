@@ -1,5 +1,9 @@
 # autoscaler
 
+[![CI](https://github.com/hrayatnia/autoscaler/actions/workflows/ci.yml/badge.svg)](https://github.com/hrayatnia/autoscaler/actions/workflows/ci.yml)
+[![Go](https://img.shields.io/badge/Go-1.22%2B-00ADD8?logo=go)](go.mod)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+
 `autoscaler` is a single-binary Go service that spawns ephemeral,
 self-hosted GitHub Actions runner containers on demand, triggered by
 GitHub webhook events. It replaces a static, always-on pool of runner
@@ -94,6 +98,18 @@ See [`docs/ARCH.md`](./docs/ARCH.md) for the full component
 breakdown, data flow, and security model, and
 [`docs/RUNBOOK.md`](./docs/RUNBOOK.md) for deployment, day-2
 operations, and troubleshooting.
+
+## Development
+
+```bash
+gofmt -l .          # must be empty
+go vet ./...
+go build ./...
+go test -race ./...
+```
+
+[`.github/workflows/ci.yml`](./.github/workflows/ci.yml) runs the same
+four checks on every push to `main` and every pull request.
 
 ## Status
 
